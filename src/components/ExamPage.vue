@@ -1,27 +1,31 @@
 <template>
   <div>
-    <div v-if="examType === 'word'">
+    <div v-if="totalProblems === 0">
+        <p>无题目</p>
+    </div>
+    
+    <div v-else-if="examType === 'word'">
       <p>题目：{{ currentProblem + 1 }} / {{ totalProblems }}</p>
-      <h1 :class="{ 'word': true, 'correct': problemFinished && isCorrect, 'incorrect': problemFinished && !isCorrect }">{{ currentWord }}</h1>
+      <h1 :class="{ 'word': true, 'root': false, 'correct': problemFinished && isCorrect, 'incorrect': problemFinished && !isCorrect }">{{ currentWord }}</h1>
       <p>所在页码：{{ currentPage }}</p>
       <input type="text" v-model="answer" @keyup.enter="checkAnswer">
       <p v-if="problemFinished">正确答案：{{ correctAnswer }}</p>
       <p v-if="problemFinished">{{ meaning }}</p>
       <div class="button-container">
-          <button @click="checkAnswer" :disabled="problemFinished">检查</button>
-          <button v-if="problemFinished" @click="nextQuestion" :disabled="examFinished">进入下一题</button>
+          <button @click="checkAnswer" :disabled="problemFinished || this.answer.trim() === ''">检查</button>
+          <button v-if="problemFinished" @click="nextQuestion" :disabled="examFinished">下一题</button>
       </div>
     </div>
     
     <div v-else-if="examType === 'root'">
       <p>题目：{{ currentProblem + 1 }} / {{ totalProblems }}</p>
-      <h1>{{ currentRoot }}</h1>
+      <h1 :class="{ 'word': false, 'word': true, 'correct': problemFinished && isCorrect, 'incorrect': problemFinished && !isCorrect }">{{ currentRoot }}</h1>
       <p>所在页码：{{ currentPage }} - {{ currentIndex }}</p>
       <input type="text" v-model="answer" @keyup.enter="checkAnswer">
       <p v-if="problemFinished">正确答案：{{ correctAnswer }}</p>
       <div class="button-container">
-          <button @click="checkAnswer" :disabled="problemFinished">检查</button>
-          <button v-if="problemFinished" @click="nextQuestion" :disabled="examFinished">进入下一题</button>
+          <button @click="checkAnswer" :disabled="problemFinished || this.answer.trim() === ''">检查</button>
+          <button v-if="problemFinished" @click="nextQuestion" :disabled="examFinished">下一题</button>
       </div>
     </div>
 
@@ -116,22 +120,6 @@ export default {
       }
       return indexes;
     },
-nextQuestion() {
-    
-      const maxProblem = this.examType === 'word' ? this.words.length : this.roots.length;
-
-      if (this.currentProblem + 1 < maxProblem) {
-          this.currentProblem++;
-        this.answer = '';
-        this.problemFinished = false;
-        this.isCorrect = false;
-        
-        this.loadQuestion();
-      }else{
-          this.examFinished = true;
-      }
-    
-},
      fetchWordRoot(rootId) {
       axios.get(`/api/roots/${rootId}`)
         .then(response => {
@@ -158,26 +146,46 @@ nextQuestion() {
       }
     },
     checkAnswer() {
+        if (!this.problemFinished && this.answer.trim() !== '') {
+          this.problemFinished = true;
+          this.totalCount++;
+    
+          if (this.examType === 'word') {
+            const userAnswer = this.answer.trim().toLowerCase();
+            const correctAnswers = this.correctAnswer.split(',');
+            this.isCorrect = correctAnswers.some(answer => answer.trim().toLowerCase().replace('-', '') === userAnswer);
+            
+          } else {
+            const userAnswer = this.answer.trim().toLowerCase().replace(/\s/g, '');
+            const correctAnswer = this.correctAnswer.trim().toLowerCase().replace(/\s/g, '').replace('，', ',');
+            this.isCorrect = userAnswer === correctAnswer;
+          }
+    
+          if (this.isCorrect) {
+            this.correctCount++;
+          }
+            
+          const maxProblem = this.examType === 'word' ? this.words.length : this.roots.length;
+          if (this.totalCount >= maxProblem) {
+              this.examFinished = true;
+          }
+        }
+    },
+    nextQuestion() {
         
-    if (!this.problemFinished) {
-      this.problemFinished = true;
-      this.totalCount++;
-
-      if (this.examType === 'word') {
-        const userAnswer = this.answer.trim().toLowerCase();
-        const correctAnswers = this.correctAnswer.split(',');
-        this.isCorrect = correctAnswers.some(answer => answer.trim().toLowerCase().replace('-', '') === userAnswer);
+          const maxProblem = this.examType === 'word' ? this.words.length : this.roots.length;
+    
+          if (this.currentProblem + 1 < maxProblem) {
+              this.currentProblem++;
+            this.answer = '';
+            this.problemFinished = false;
+            this.isCorrect = false;
+            
+            this.loadQuestion();
+          }else{
+              this.examFinished = true;
+          }
         
-      } else {
-        const userAnswer = this.answer.trim().toLowerCase().replace(/\s/g, '');
-        const correctAnswer = this.correctAnswer.trim().toLowerCase().replace(/\s/g, '').replace('，', ',');
-        this.isCorrect = userAnswer === correctAnswer;
-      }
-
-      if (this.isCorrect) {
-        this.correctCount++;
-      }
-    }
     },
     goHome() {
       this.$router.push('/');

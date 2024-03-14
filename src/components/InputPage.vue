@@ -40,7 +40,11 @@ export default {
   },
   methods: {
     startExam() {
-      // 进行页面跳转并传递考试参数
+      const page = parseInt(this.pageRange);
+      if (!isNaN(page)) {
+        this.pageRange = `${page}-${page}`;
+      }
+      
       if(this.examMode == 'random'){
       this.$router.push({ path: '/exam', query: { pageRange: this.pageRange, examType: this.examType, examMode: this.examMode, examSize: this.examSize }});
       }else{
